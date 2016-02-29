@@ -1,4 +1,4 @@
-Year,Daynum,Wteam,Wscore,Lteam,Lscore,Wloc,Numot,Winseed,Lseed,meanProb,numProb,spreadbet
+Season,Daynum,Wteam,Wscore,Lteam,Lscore,Wloc,Numot,Wseed,Lseed,meanProb,numProb,spreadbet
 2011,134,1155,70,1412,52,N,0,12,12,0.50,1,0
 2011,134,1421,81,1114,77,N,1,16,16,0.50,1,0
 2011,135,1427,70,1106,61,N,0,16,16,0.50,1,0
