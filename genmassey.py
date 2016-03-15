@@ -63,12 +63,7 @@ def add_features(df):
     return dfa.df
 
 if __name__ == "__main__":
-    Ncores=8
-    df = pd.read_csv('data/tourneydata'+dfnum+'.csv', index_col=0)
-    dfsplit = np.array_split(df,Ncores)
+    df = pd.read_csv('data/fulldata'+dfnum+'.csv', index_col=0)
     from multiprocessing import Pool
-    pool = Pool(Ncores)
-    dfs = pool.map(add_features, dfsplit)
-    dfnew = pd.concat([df for df in dfs])
-    dfnew.to_csv('data/tourneydata'+dfnum+'.csv', encoding='ascii')
-    print("Job {0} finished".format{dfnum})
+    dfnew = add_features(df)
+    dfnew.to_csv('data/nfulldata'+dfnum+'.csv', encoding='ascii')
