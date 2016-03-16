@@ -19,7 +19,7 @@ for i in range(Npts):
         of.write("cd $PBS_O_WORKDIR\n")
         of.write("module load gcc/4.9.2\n")
         of.write("source /mnt/raid-cita/dtamayo/p2/bin/activate\n")
-        of.write("python /mnt/raid-cita/dtamayo/NCAAbasketball/rf.py {0}\n".format(size))
+        of.write("python /mnt/raid-cita/dtamayo/NCAAbasketball/rf.py {0} {1}\n".format(i, size))
         
         call("chmod u=rwx script{0}.sh".format(i), shell=True)
 
