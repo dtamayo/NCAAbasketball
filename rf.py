@@ -28,7 +28,7 @@ y_train_sample = y_train[0:size]
 cv_s = StratifiedShuffleSplit(y_train_sample,  n_iter=10 , test_size=0.1, random_state=42)
 rfc = RandomForestClassifier(max_features= 'auto' ,n_estimators=50) 
 param_grid = { 
-               'n_estimators': [30],
+               'n_estimators': [500],
                        'max_features': ['sqrt']}
 CV_rfc = GridSearchCV(n_jobs=-1, estimator=rfc, scoring="log_loss", param_grid=param_grid, cv=cv_s)
 CV_rfc.fit(X_train_sample, y_train_sample)
