@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy.polynomial.polynomial import polyfit
+
 try:
     plt.style.use('paper')
 except:
@@ -13,9 +15,13 @@ class Calcutta():
         self.syndicates = {name:Syndicate(bracketfile) for name in syndicatenames}
         self.mysyn = self.syndicates[syndicatenames[0]]
         self.orig_pool = poolestimate
-
+        self.poolxs = []
+        self.poolys = []
+        self.poolestimates = []
+        self.poolestimates2 = []
+        self._update_pool_estimate()
+        
     def check(self, team, plot=False):
-        pool = self.poolestimate
         simresults = self.mysyn.sim_results(self._simtourneys)
         meanpre = simresults.mean()
         varpre = simresults.var()
@@ -25,7 +31,7 @@ class Calcutta():
         simresults = single.sim_results(self._simtourneys)
         meansingle = simresults.mean()
         varsingle = simresults.var()
-        single.plot(self._simtourneys, pool=self.pool)
+        single.plot(self._simtourneys, pool=self.poolestimates[-1])
         
         self.mysyn.to_npy('temp.npy') # make copy before hypothetical add
         self.mysyn.add(team)
@@ -34,7 +40,7 @@ class Calcutta():
         meanpost = simresults.mean()
         varpost = simresults.var()
         
-        value = (meanpost-meanpre)*self.pool
+        value = (meanpost-meanpre)*self.poolestimates[-1]
         cov = (varpost - varpre - varsingle)/2. # Var(X+Y) = Var(X) + Var(Y) + 2Cov(X,Y)
         corr = cov/np.sqrt(varpre*varsingle)
        
@@ -44,8 +50,9 @@ class Calcutta():
     
     def buy(self, team, syndicate, amount, weight=1., plot=True):
         self.syndicates[syndicate].add(team=team, weight=weight, paid=amount)
+        self._update_pool_estimate()
         if plot:
-            self.syndicates[syndicate].plot(self._simtourneys, pool=self.poolestimate)
+            self.syndicates[syndicate].plot(self._simtourneys, pool=self.poolestimates[-1])
         
     @property
     def currentpool(self):
@@ -54,23 +61,24 @@ class Calcutta():
             pool += syn.totpaid
         return pool
     
-    @property
-    def poolestimate(self):
+    def _update_pool_estimate(self):
         single = Syndicate(self._bracketfile)
         for syn in self.syndicates.values():
             single.add(syn.teams['Team'].values)
         totteams = single.teams.shape[0]
         if totteams == 0:
-            est_pool = 0
+            est_pool = self.orig_pool
         else:
             simresults = single.sim_results(self._simtourneys)
-            meanfraction = simresults.mean() # mean share for teams held by all syndicates
-            # estimate * meanfraction = self.currentpool
-            est_pool = self.currentpool / meanfraction
-        memory = 10. # Scale for # of teams to use for orig pool estimate
+            self.poolxs.append(simresults.mean()) # mean share for teams held by all syndicates
+            self.poolys.append(self.currentpool)
+            b,m = polyfit(self.poolxs, self.poolys, 1)
+            est_pool = b+m
+            
+        memory = 49. # Scale for # of teams to use for orig pool estimate
         frac_orig = max(1.-totteams/memory, 0.)
-        return frac_orig*self.orig_pool + (1-frac_orig)*est_pool
-    
+        self.poolestimates.append(frac_orig*self.orig_pool + (1.-frac_orig)*est_pool)
+        
 class Syndicate():
     def __init__(self, bracketfile):
         # make dictionary to map from numeric ID to index in holdings array
@@ -83,19 +91,18 @@ class Syndicate():
         self.mean = 0.
         self.var = 0.
     def add(self, team, weight=1, paid=0.):
-        try:
+        if isinstance(team, (list, np.ndarray)):
             for t in team:
                 self.add(t, weight)
             return
-        except:
-            if team in self._teams['Team'].values:
-                if self._teams.loc[self._teams['Team']==team, 'Amount'].values[0] > 0: # overwriting, remove from tot
-                    self.totpaid -= self._teams.loc[self._teams['Team']==team, 'Amount']
-                self._teams.loc[self._teams['Team']==team, 'Fraction Owned'] = weight
-                self._teams.loc[self._teams['Team']==team, 'Amount'] = paid
-                self.totpaid += paid
-            else:
-                raise KeyError("Team name {0} not found.".format(team))
+        if team in self._teams['Team'].values:
+            if self._teams.loc[self._teams['Team']==team, 'Amount'].values[0] > 0: # overwriting, remove from tot
+                self.totpaid -= self._teams.loc[self._teams['Team']==team, 'Amount']
+            self._teams.loc[self._teams['Team']==team, 'Fraction Owned'] = weight
+            self._teams.loc[self._teams['Team']==team, 'Amount'] = paid
+            self.totpaid += paid
+        else:
+            raise KeyError("Team name {0} not found.".format(team))
     
     def to_npy(self, filename):
         np.save(filename, self.array)
